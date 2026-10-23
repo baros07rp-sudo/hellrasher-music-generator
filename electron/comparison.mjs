@@ -2,7 +2,9 @@
 export function rankCandidates(tracks){
  const complete=tracks.length>1&&tracks.every(v=>['ok','review'].includes(v.quality?.status));
  const speech=complete&&tracks.every(v=>v.quality.lyrics?.status==='done'&&v.quality.lyrics.expectedWords>=12&&v.quality.lyrics.recognizedWords>=12);
- const risk=v=>{const q=v.quality;if(!['ok','review'].includes(q?.status))return Infinity;return (q.issues||[]).reduce((n,i)=>n+(i.severity==='error'?100:10),0);};
+ // A missing/unreliable transcript must not win merely by lacking an ASR
+ // mismatch warning. Compare lyric errors only when all ASR results qualify.
+ const risk=v=>{const q=v.quality;if(!['ok','review'].includes(q?.status))return Infinity;return (q.issues||[]).filter(i=>i.code!=='lyrics-mismatch').reduce((n,i)=>n+(i.severity==='error'?100:10),0);};
  const compare=(a,b)=>risk(a)-risk(b)||(speech&&Math.abs(a.quality.lyrics.wordErrorRate-b.quality.lyrics.wordErrorRate)>=.05?a.quality.lyrics.wordErrorRate-b.quality.lyrics.wordErrorRate:0);
  const ordered=[...tracks].sort((a,b)=>{const difference=compare(a,b);return (Number.isNaN(difference)?0:difference)||(a.candidateIndex||0)-(b.candidateIndex||0);});
  const first=ordered[0],next=ordered[1],recommendedId=complete&&first&&!first.quality.issues?.some(i=>i.severity==='error')&&next&&compare(first,next)<0?first.id:null;
