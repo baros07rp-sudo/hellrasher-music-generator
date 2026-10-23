@@ -10,6 +10,8 @@
 
 ACE dostává stručný caption a samostatná metadata. YuE2 vlastní stylový popis. MiniMax Structured Caption s Global Metadata, Vocal Details a Arrangement. Parametry enginů se nezaměňují.
 
+Režie plánuje melodický motiv a výraz odděleně od barvy hlasu. Popisuje obrys a návrat motivu, odpověď fráze, dechová místa, kontrast částí a průběh napětí a uvolnění. Tyto pokyny vstupují do captionu všech tří enginů i při již hotovém hlasovém popisu. U instrumentálu se vztahují k vedoucím nástrojům, u rapu k rytmické frázi a u statického ambientu k textuře. Výslovná nálada, forma a žánr mají přednost; změna nevnucuje belting ani vítězný závěr. Samotná přítomnost plánu nepotvrzuje kvalitu výsledné melodie nebo emocí.
+
 Automatická délka vychází z řádků, slabik, tempa a struktury. YuE2 dostává instrumentální rezervu; explicitní délka zůstává zachovaná. Dosažení časového limitu YuE2 vyvolá upozornění na možný chybějící konec nebo slova.
 
 Správce odstraňuje pouze soubory z manifestů a jejich .part stažení. Spravované procesy nejprve uvolní. Vlastní GGUF mimo vybranou složku se nemaže. Hotová audio zůstávají přehratelná i po odinstalaci modelu.

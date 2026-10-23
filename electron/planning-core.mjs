@@ -1,6 +1,7 @@
 import {generationProject} from './creation.mjs';
 import {styleIdentity,positiveBrief,explicitExclusions} from './style-guide.mjs';
-export const PLAN_VERSION='music-director-6';
+import {performanceDirection,performanceConflicts} from './performance-direction.mjs';
+export const PLAN_VERSION='music-director-7';
 const strip=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 export function planKey(p){
@@ -46,12 +47,13 @@ export function identityConflicts(p,draft){
  if(intent.meter&&draft.meter&&intent.meter!==draft.meter)errors.push(`meter must be ${intent.meter}`);
  const language=lyricAnalysis(p).language;if(language==='cs'&&draft.vocalLanguage&&!/^(?:cs|cze|czech|čeština)$/i.test(draft.vocalLanguage))errors.push('vocalLanguage must be Czech (cs)');
  if(draft.global&&draft.vocals&&draft.arrangement){
-  const actual=strip([draft.global,draft.vocals,draft.arrangement].join(' ')),positive=positiveBrief(p.concept),sounding=positiveBrief(draft.global+' '+draft.arrangement);
+  const actual=strip([draft.global,draft.vocals,draft.arrangement,draft.melody,draft.expression].filter(Boolean).join(' ')),positive=positiveBrief(p.concept),sounding=positiveBrief(draft.global+' '+draft.arrangement);
   for(const family of styleIdentity(generationProject(p)).families.slice(0,2))if(!styleIdentity({concept:sounding,styles:[]}).families.some(x=>x.id===family.id))errors.push(`the actual caption must describe ${family.label}, not only list it in genres`);
   const choirCheck=actual.replace(/no (?:additional|other|backing) (?:voices|vocals|harmonies) except (?:the )?(?:specified )?(?:female |backing )?(?:choir|choral voices)\b/g,'');
   if(/choir|sbor/.test(positive)&&(/no (?:additional|other|backing) (?:voices|vocals|harmonies)|no (?:choir|harmonies|backing vocals)/.test(choirCheck)||! /choir|choral|sbor/.test(sounding)))errors.push('preserve the explicitly requested backing choir; female-only lead does not prohibit a choir');
   if(/\bmetal\b/.test(positive)&&!/(?:no|without|bez)[^.;\n]*(?:guitar|kytar)/.test(strip(p.concept))&&!/(?:riff|distort|palm.mut|power.chord|chugg|heavy.{0,18}guitar|overdriven)/.test(sounding))errors.push('describe a concrete metal guitar foundation in the actual arrangement');
  }
+ errors.push(...performanceConflicts(performanceDirection(generationProject(p),lyricAnalysis(p),intent),draft));
  return [...new Set(errors)];
 }
 export function estimateDuration(p,draft={}){
@@ -90,6 +92,7 @@ function defaultTimeline(analysis,intent){
 export function compilePlan(p,draft={},provider='templates',{backend='minimax'}={}){
  p=generationProject(p);
  const analysis=lyricAnalysis(p),intent=inferIntent(p),duration=estimateDuration(p,draft),warnings=[...analysis.warnings,...(draft.warnings||[])];
+ const direction=performanceDirection(p,analysis,intent),melody=direction.melodyEnabled?(draft.melody||direction.melody):'',expression=direction.expressionEnabled?(draft.expression||direction.expression):'';
  if(backend==='yue2-native'&&p.durationMode==='auto'&&duration.source==='lyrics_estimate'){
   const budget=duration.seconds+60;duration.seconds=Math.min(300,budget);duration.limited=duration.limited||budget>300;
   duration.explanation+=' YuE2 dostává navíc 60 sekund pro instrumentální úvod a přirozený závěr.';
@@ -101,8 +104,6 @@ export function compilePlan(p,draft={},provider='templates',{backend='minimax'}=
  const vocal=p.instrumental?'Instrumental only. No singing, speech or vocal layers. The lead melody is carried by the requested lead instruments.':[
   draft.vocals||'Use an expressive, genre-appropriate lead delivery, with natural phrasing and a stable vocal identity.',intent.voice==='custom'?p.voiceCustom:intent.voice!=='unspecified'?`Lead vocal configuration: ${intent.voice}.`:'',
   language==='cs'?'Singing language: Czech. Use natural Czech diction, intact long and short vowels, clear consonants and word boundaries; preserve the supplied words and diacritics.':language!=='auto'?`Singing language: ${language}. Preserve the supplied lyrics exactly.`:'Use the language of the supplied lyrics without translating them.',
-  !draft.vocals&&p.emotionalPerformance!==false?'The delivery follows phrase dynamics, breathing and harmonic tension appropriate to the requested mood.':'',
-  !draft.vocals&&p.melodicWriting!==false&&!intent.rap?'A recurring melodic motif connects the phrases with deliberate contour and breathing space.':'',
   p.timbres?.length?`Vocal timbre: ${p.timbres.join(', ')}.`:'',p.performance?`Performance: ${p.performance}.`:'',p.vocalInstructions,p.effects?.length?`Vocal production: ${p.effects.join(', ')}.`:''].filter(Boolean).join(' ');
  const instrument=p.instruments?.map(x=>`${x.name}: ${x.role||'supporting'}${x.character?'; '+x.character:''}${x.section?'; enters in '+x.section:''}${x.solo?'; featured solo':''}${x.evolution?'; '+x.evolution:''}`).join('. ');
  const explicitSections=p.sections?.map(s=>`[${s.type}] ${s.direction||'Maintain continuity.'}`).join('\n');
@@ -113,11 +114,11 @@ export function compilePlan(p,draft={},provider='templates',{backend='minimax'}=
  // Do not wrap its short draft in MiniMax's repeated prose or duration guidance.
  const ace=backend.startsWith('acestep');
  const yue=backend==='yue2-native';
- let caption=yue?[genres.join(', '),language==='cs'?'Czech':language!=='auto'&&language!=='none'?language:'',draft.global||promptBrief(p),draft.vocals||(p.instrumental?'instrumental':vocal),draft.arrangement||defaultTimeline(analysis,{...intent,genres}),instrument,explicitSections,tagDirections].filter(Boolean).join(', '):ace?[style,draft.global||promptBrief(p),draft.vocals||(p.instrumental?'Instrumental.':vocal),draft.arrangement||defaultTimeline(analysis,{...intent,genres}),instrument,explicitSections,tagDirections,p.groove,p.bass,p.percussion,p.textures,p.space,p.mood,p.production].filter(Boolean).join('\n'):`Global Metadata\n${global}\n\nVocal Details\n${vocal}\n\nArrangement\n${arrangement}`;
+ let caption=yue?[genres.join(', '),language==='cs'?'Czech':language!=='auto'&&language!=='none'?language:'',draft.global||promptBrief(p),melody,expression,draft.vocals||(p.instrumental?'instrumental':vocal),draft.arrangement||defaultTimeline(analysis,{...intent,genres}),instrument,explicitSections,tagDirections].filter(Boolean).join(', '):ace?[style,draft.global||promptBrief(p),melody,expression,draft.vocals||(p.instrumental?'Instrumental.':vocal),draft.arrangement||defaultTimeline(analysis,{...intent,genres}),instrument,explicitSections,tagDirections,p.groove,p.bass,p.percussion,p.textures,p.space,p.mood,p.production].filter(Boolean).join('\n'):`Global Metadata\n${global}\n\nVocal Details\n${[vocal,melody,expression].filter(Boolean).join(' ')}\n\nArrangement\n${arrangement}`;
  caption=caption.replace(/[“„"]([^“”„"]{4,})[”"]/g,(whole,quote)=>strip(p.lyrics||'').includes(strip(quote))?'the recurring vocal motif':whole);
  // The lyric body remains solely in the lyric input. Never duplicate a line
  // that a local language model accidentally quotes into the music caption.
  for(const line of analysis.sections.flatMap(s=>s.lines)){if(line.length>=15&&caption.includes(line)){caption=caption.split(line).join('the recurring vocal motif');warnings.push('Z popisu byl odstraněn citovaný zpívaný řádek; samotný text zůstává zachovaný.');}}
  if(duration.limited)warnings.push('Odhad přesahuje pět minut. Model dostane maximální povolený rozpočet; dlouhý text nemusí celý zazpívat.');
- return {version:PLAN_VERSION,backend,sourceKey:planKey(p),caption,duration:duration.seconds,durationAnalysis:duration,language,genres,bpm,meter,key,provider,exclusions:explicitExclusions(p),warnings:[...new Set(warnings)],requirements:Array.isArray(draft.requirements)?draft.requirements:[],created:new Date().toISOString()};
+ return {version:PLAN_VERSION,backend,sourceKey:planKey(p),caption,duration:duration.seconds,durationAnalysis:duration,language,genres,bpm,meter,key,provider,performance:{mode:direction.mode,melody,expression},exclusions:explicitExclusions(p),warnings:[...new Set(warnings)],requirements:Array.isArray(draft.requirements)?draft.requirements:[],created:new Date().toISOString()};
 }

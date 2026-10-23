@@ -26,7 +26,7 @@ export function SimpleComposer({project,update,state,working,currentJob,count,se
    {!automatic&&<div className="quick-manual"><strong>Vlastní nastavení je aktivní</strong><p>Při tvorbě se použijí vaše pokročilé hodnoty.</p><button className="text-button" onClick={()=>update({automationMode:'auto'})}>Přepnout na plnou automatiku</button></div>}
   </fieldset>
   <div className="quick-footer">
-   <div className="quick-auto"><Check size={14}/><span>{automatic?'Délka, hlas a aranžmá automaticky podle zadání':'Vlastní hudební nastavení'}</span><button className="icon" title="Pokročilé možnosti" disabled={busy} onClick={()=>update({advanced:true})}><SlidersHorizontal size={15}/></button></div>
+   <div className="quick-auto"><Check size={14}/><span>{automatic?'Melodie, výraz a délka automaticky podle zadání':'Vlastní hudební nastavení'}</span><button className="icon" title="Pokročilé možnosti" disabled={busy} onClick={()=>update({advanced:true})}><SlidersHorizontal size={15}/></button></div>
    <button className="quick-create" disabled={busy||!hasBrief||needsLyrics} onClick={onCreate}>{busy?<LoaderCircle size={20} className="spin"/>:<Sparkles size={20}/>} {busy?'Vytvářím skladbu…':needsModels?'Stáhnout modely a vytvořit':'Vytvořit skladbu'}</button>
    {phase&&<p className="quick-progress" role="status">{phase}</p>}
    {downloading&&<><progress value={downloading.received} max={downloading.total||1}/><small className="muted">První příprava může trvat déle. Další tvorba už použije stažené modely.</small><button className="text-button" onClick={onCancelDownload}>Pozastavit stahování</button></>}
