@@ -6,20 +6,22 @@ const {ensureReady}=require('./readiness.cjs');
 const {qualityRouting,routingWarnings}=require('./model-quality.cjs');
 const {ModelLibrary}=require('./model-library.cjs');
 const {Updates}=require('./updates.cjs');
+const {QualityCheck}=require('./quality-check.cjs');
 const appInfo=require('./version.cjs');
 const {spawn}=require('node:child_process');
 app.setName('Hellrasher Music Generator');
 protocol.registerSchemesAsPrivileged([{scheme:'hmg-audio',privileges:{standard:true,secure:true,supportFetchAPI:true,stream:true}}]);
 const ROOT=path.resolve(__dirname,'..'),RES=app.isPackaged?process.resourcesPath:path.join(ROOT,'resources');
-let win,storage,engine,models,audio,queue,planner,domain,settings,settingsFile,hardware=[],notifyTimer,closing=false,modelAction=false,preparation=null,modelInstall=null,modelInstallError=null,updater;
+let win,storage,engine,models,audio,queue,planner,quality,domain,settings,settingsFile,hardware=[],notifyTimer,closing=false,modelAction=false,preparation=null,modelInstall=null,modelInstallError=null,updater;
 const userData=process.env.HMG_DATA_PATH||path.join(app.getPath('appData'),'Hellrasher Music Generator');fs.mkdirSync(userData,{recursive:true});app.setPath('userData',userData);
 const primaryInstance=app.requestSingleInstanceLock();if(!primaryInstance)app.quit();
 app.on('second-instance',()=>{if(win&&!win.isDestroyed()){if(win.isMinimized())win.restore();win.show();win.focus();}});
 function notify(){if(notifyTimer)return;notifyTimer=setTimeout(()=>{notifyTimer=null;if(win&&!win.isDestroyed())win.webContents.send('hmg:change');},200);}
 function saveSettings(){fs.writeFileSync(settingsFile+'.tmp',JSON.stringify(settings,null,2),'utf8');fs.renameSync(settingsFile+'.tmp',settingsFile);}
-function configureEngine(){engine=createEngine({config:settings.backend,nativeFolder:path.join(RES,'backend'),models:settings.modelsPath,notify,logFile:path.join(app.getPath('userData'),'engine.log')});queue=new Queue(storage,engine,file=>audio.probe(file),notify);}
+function createQueue(){return new Queue(storage,engine,file=>audio.probe(file),notify,{check:(...args)=>quality.check(...args),cancel:()=>quality.cancel()});}
+function configureEngine(){engine=createEngine({config:settings.backend,nativeFolder:path.join(RES,'backend'),models:settings.modelsPath,notify,logFile:path.join(app.getPath('userData'),'engine.log')});quality=new QualityCheck(RES,settings.modelsPath,audio,notify);queue=createQueue();}
 function configure(){updater ||=new Updates({user:app.getPath('userData'),resources:RES,notify});storage=new Storage(settings.projectsPath);audio=new Audio(path.join(RES,'ffmpeg'));models=new Models(path.join(RES,app.isPackaged?'model-manifest':'models','upstream.json'),settings.modelsPath,notify);planner=new Planner(path.join(RES,'planner'),settings.modelsPath,()=>({...settings.planner,targetBackend:settings.backend.id}),notify);configureEngine();}
-function requireIdle(){if(queue.busy()||planner.active)throw Error('Nejdříve dokončete přípravu zadání a generování.');if(modelInstall||models.active||planner.download||engine.download)throw Error('Nejdříve dokončete nebo pozastavte stahování modelů.');}
+function requireIdle(){if(queue.busy()||planner.active||quality.active)throw Error('Nejdříve dokončete přípravu zadání, generování nebo kontrolu skladby.');if(modelInstall||models.active||planner.download||engine.download||quality.download)throw Error('Nejdříve dokončete nebo pozastavte stahování modelů.');}
 function preparationPhase(message){preparation=message;notify();}
 function musicRouting(){return settings.routingMode==='manual'?settings.routing:qualityRouting(models.entries(),hardware[0]);}
 function modelLibrary(){return new ModelLibrary(RES,settings.modelsPath,models);}
@@ -33,7 +35,7 @@ async function prepareProject(project,force=false){
 }
 async function fileDialog(kind,options){const r=kind==='save'?await dialog.showSaveDialog(win,options):await dialog.showOpenDialog(win,options);return kind==='save'?r.filePath:r.filePaths?.[0];}
 const actions={
- async state(){return {app:appInfo,updates:updater.snapshot(),settings:{...settings,routing:musicRouting()},routingWarnings:routingWarnings(musicRouting(),hardware[0]),modelLibrary:await modelLibrary().status(musicRouting()),modelInstall:modelInstall?{id:modelInstall.id,...(modelInstall.engine?.download||models.active||planner.download||{}) ,controller:undefined}:null,modelInstallError,projects:storage.projects(),trashedVariants:storage.variants(undefined,true),variants:storage.variants().map(v=>({...v,request:{...v.request,audio_codes:undefined,semantic_tokens:undefined}})),jobs:storage.jobs().map(({request,snapshot,...j})=>j),presets:[...domain.BUILTIN_PRESETS,...storage.presets()],engine:{...engine.snapshot(),logs:engine.logs.slice(-100)},planner:planner.snapshot(),preparation,backends:BACKENDS,gpu:hardware,models:await models.status(),ram:{total:os.totalmem(),free:os.freemem()},activeJob:queue.active?.id||null};},
+ async state(){return {app:appInfo,quality:quality.snapshot(),updates:updater.snapshot(),settings:{...settings,routing:musicRouting()},routingWarnings:routingWarnings(musicRouting(),hardware[0]),modelLibrary:await modelLibrary().status(musicRouting()),modelInstall:modelInstall?{id:modelInstall.id,...(modelInstall.engine?.download||models.active||planner.download||quality.download||{}) ,controller:undefined}:null,modelInstallError,projects:storage.projects(),trashedVariants:storage.variants(undefined,true),variants:storage.variants().map(v=>({...v,request:{...v.request,audio_codes:undefined,semantic_tokens:undefined}})),jobs:storage.jobs().map(({request,snapshot,...j})=>j),presets:[...domain.BUILTIN_PRESETS,...storage.presets()],engine:{...engine.snapshot(),logs:engine.logs.slice(-100)},planner:planner.snapshot(),preparation,backends:BACKENDS,gpu:hardware,models:await models.status(),ram:{total:os.totalmem(),free:os.freemem()},activeJob:queue.active?.id||null};},
  async checkUpdates(){return updater.check();},
  async downloadUpdate(){if(updater.state.status!=='available')throw Error('Nejprve zkontrolujte dostupnou aktualizaci.');updater.download().catch(e=>updater.set({status:'error',error:e.message}));return true;},
  async cancelUpdateDownload(){updater.cancel();},
@@ -45,6 +47,8 @@ const actions={
   await new Promise((resolve,reject)=>{proc.once('spawn',resolve);proc.once('error',reject);});proc.unref();setTimeout(()=>app.quit(),250);return true;
  },
  async variant({id}){return storage.variant(id);},
+ async checkVariant({id}){requireIdle();const v=storage.variant(id),report=await quality.check(storage.audioPath(v),v.technical,{...v.request,backend:v.backend||v.request.backend||'minimax'},v.snapshot,id);storage.setQuality(id,report);notify();return report;},
+ async cancelQualityCheck(){quality.cancel();},
  async waveform({id}){return audio.waveform(storage.audioPath(storage.variant(id)));},
  async save(p){domain.validateProject(p);return storage.saveProject(p);},
  async archive({id,archived}){storage.archive(id,archived);notify();},
@@ -59,9 +63,9 @@ const actions={
  async installModelPackage({id}){
   requireIdle();if(!modelLibrary().packages(musicRouting()).some(g=>g.id===id))throw Error('Neznámá sada modelů.');
   if(engine.capabilities.managed)await engine.release();await planner.release();const task={id,engine:null};modelInstall=task;modelInstallError=null;settings.downloadError=null;notify();
-  (async()=>{if(id==='planner')await planner.install();else if(id==='minimax')await models.download(Object.values(musicRouting()));else{task.engine=createEngine({config:{id,model:''},nativeFolder:path.join(RES,'backend'),models:settings.modelsPath,notify});await task.engine.ensureInstalled();}})().catch(e=>{if(e.name!=='AbortError')modelInstallError=e.message;}).finally(()=>{modelInstall=null;notify();});return true;
+  (async()=>{if(id==='planner')await planner.install();else if(id==='quality')await quality.install();else if(id==='minimax')await models.download(Object.values(musicRouting()));else{task.engine=createEngine({config:{id,model:''},nativeFolder:path.join(RES,'backend'),models:settings.modelsPath,notify});await task.engine.ensureInstalled();}})().catch(e=>{if(e.name!=='AbortError')modelInstallError=e.message;}).finally(()=>{modelInstall=null;notify();});return true;
  },
- async cancelModelInstall(){modelInstall?.engine?.cancelDownload();engine.cancelDownload?.();models.cancel();planner.cancelDownload();},
+ async cancelModelInstall(){modelInstall?.engine?.cancelDownload();engine.cancelDownload?.();models.cancel();planner.cancelDownload();quality.cancelDownload();},
  async removeModelPackage({id,name}){
   requireIdle();const library=modelLibrary();await library.removalPlan(id,name,musicRouting());
   if(engine.capabilities.managed)await engine.release();await planner.release();const result=await library.remove(id,name,musicRouting());models.integrity={};notify();return result;
@@ -80,6 +84,7 @@ const actions={
   requireIdle();domain.validateProject(project);const input=domain.generationProject(project);if(!Number.isInteger(count)||count<1||count>20)throw Error('Počet variant musí být 1–20.');if(!input.concept.trim()&&!input.styles.length&&!input.manualCaption?.trim())throw Error('Popište hudbu, kterou chcete vytvořit.');if(!domain.lyricInput(input).trim()&&(input.autoLyrics===false||input.manualCaption!==null))throw Error('Vložte vlastní text, nebo přepněte na tvorbu ze zadání.');
   await ready({includePlanner:input.manualCaption===null});
   const p=await prepareProject(project);
+  if(!p.instrumental&&p.checkLyrics!==false&&!quality.installed()){preparationPhase('Připravuji lokální kontrolu zpěvu');try{await quality.install();}finally{preparationPhase(null);}}
   const props=await engine.start();
   const routing=engine.id==='minimax'?musicRouting():{};if(engine.id==='minimax')for(const k of ['lm','depth','cond','dit','vae'])if(!props.models[k]?.includes(routing[k+'_model']))throw Error('Vybrané modelové komponenty nejsou nainstalované. Otevřete AI modely.');
   const request=domain.buildRequest(p,props.defaults,routing,engine.id);request.backend=engine.id;if(engine.id.startsWith('acestep')){request.backend=engine.id;const plan=domain.caption(p).plan;request.vocal_language=/^[a-z]{2}$/.test(plan.language)?plan.language:'unknown';request.lm_negative_prompt=(plan.exclusions||[]).join(', ');request.bpm=plan.bpm||0;request.timesignature=plan.meter?.split('/')[0]||'';request.keyscale=/^[A-G](?:#|b)? (?:major|minor)$/.test(plan.key)?plan.key:'';}
@@ -109,7 +114,7 @@ const actions={
   }
   saveSettings();notify();return settings;
  },
- async folder({kind}){if(!['models','projects','export'].includes(kind))throw Error('Neznámé umístění.');requireIdle();if(models.active||planner.download)throw Error('Nejdříve dokončete stahování.');const folder=await fileDialog('open',{properties:['openDirectory','createDirectory'],title:'Vyberte složku pro '+({models:'modely',projects:'projekty',export:'export'}[kind])});if(!folder)return null;engine.stop();if(kind==='projects')storage.close();settings[kind+'Path']=folder;saveSettings();if(kind==='projects'){storage=new Storage(folder);queue=new Queue(storage,engine,file=>audio.probe(file),notify);}if(kind==='models'){models.folder=folder;models.integrity={};planner.models=folder;configureEngine();}notify();return folder;},
+ async folder({kind}){if(!['models','projects','export'].includes(kind))throw Error('Neznámé umístění.');requireIdle();if(models.active||planner.download)throw Error('Nejdříve dokončete stahování.');const folder=await fileDialog('open',{properties:['openDirectory','createDirectory'],title:'Vyberte složku pro '+({models:'modely',projects:'projekty',export:'export'}[kind])});if(!folder)return null;engine.stop();if(kind==='projects')storage.close();settings[kind+'Path']=folder;saveSettings();if(kind==='projects'){storage=new Storage(folder);queue=createQueue();}if(kind==='models'){models.folder=folder;models.integrity={};planner.models=folder;configureEngine();}notify();return folder;},
  async download({names}){requireIdle();engine.stop();models.download(names).catch(e=>{settings.downloadError=e.message;saveSettings();notify();});settings.downloadError=null;return true;},
  async cancelDownload(){models.cancel();},
  async downloadPlanner(){requireIdle();if(engine.capabilities.managed)await engine.release();planner.install().catch(e=>{planner.error=e.message;notify();});return true;},
@@ -126,15 +131,15 @@ if(primaryInstance)app.whenReady().then(async()=>{
  if(loaded.recovered){const backup=settingsFile+'.before-model-path-recovery';if(!fs.existsSync(backup))fs.copyFileSync(settingsFile,backup);}
  saveSettings();configure();
  protocol.handle('hmg-audio',async request=>{try{const id=new URL(request.url).hostname;if(!/^[\w-]+$/.test(id))throw Error();const v=storage.variant(id);return electronNet.fetch(pathToFileURL(storage.audioPath(v)).toString(),{headers:request.headers});}catch{return new Response('Audio nebylo nalezeno',{status:404});}});
- const serial=new Set(['generate','prepare','rerender','retry','settings','folder','download','downloadPlanner','plannerModel','removeModel','startEngine','stopEngine','tokens','selectBackend','installModelPackage','removeModelPackage','trashVariants','restoreVariants','purgeVariants','renameVariant']);
+ const serial=new Set(['generate','prepare','rerender','retry','checkVariant','settings','folder','download','downloadPlanner','plannerModel','removeModel','startEngine','stopEngine','tokens','selectBackend','installModelPackage','removeModelPackage','trashVariants','restoreVariants','purgeVariants','renameVariant']);
  ipcMain.handle('hmg:call',async(event,action,payload)=>{if(!win||event.sender!==win.webContents||!Object.hasOwn(actions,action))throw Error('Nepovolená operace.');const locked=serial.has(action);if(locked&&modelAction)throw Error('Právě probíhá příprava nebo změna modelu. Počkejte na dokončení.');if(locked)modelAction=true;try{return await actions[action](payload);}finally{if(locked)modelAction=false;}});
  win=new BrowserWindow({width:1580,height:1020,minWidth:1080,minHeight:760,title:'Hellrasher Music Generator',backgroundColor:'#10151c',icon:path.join(ROOT,'dist','brand.png'),webPreferences:{preload:path.join(__dirname,'preload.cjs'),nodeIntegration:false,contextIsolation:true,sandbox:true,webSecurity:true}});
  win.removeMenu();win.webContents.setWindowOpenHandler(()=>({action:'deny'}));win.webContents.on('will-navigate',event=>event.preventDefault());win.webContents.session.setPermissionRequestHandler((_wc,_p,cb)=>cb(false));
  win.webContents.on('render-process-gone',()=>{queue.stop();});
  await win.loadFile(path.join(ROOT,'dist','index.html'));
  hardware=await gpu();notify();if(settings.updateChecks!==false){const check=setTimeout(()=>updater.check(),3500);check.unref();}const monitor=setInterval(async()=>{hardware=await gpu();notify();},3000);monitor.unref();
- win.on('close',()=>{closing=true;updater.cancel();modelInstall?.engine?.cancelDownload();engine.cancelDownload?.();models.cancel();planner.cancelDownload();planner.stop();queue.stop();});
+ win.on('close',()=>{closing=true;quality.cancel();quality.cancelDownload();updater.cancel();modelInstall?.engine?.cancelDownload();engine.cancelDownload?.();models.cancel();planner.cancelDownload();planner.stop();queue.stop();});
  if(process.env.HMG_UI_TEST)win.webContents.openDevTools({mode:'detach'});
 }).catch(e=>{dialog.showErrorBox('Hellrasher Music Generator',e.stack||e.message);app.quit();});
-app.on('window-all-closed',()=>app.quit());app.on('before-quit',()=>{if(!closing){modelInstall?.engine?.cancelDownload();engine?.cancelDownload?.();models?.cancel();planner?.cancelDownload();planner?.stop();queue?.stop();}try{storage?.close();}catch{}});
+app.on('window-all-closed',()=>app.quit());app.on('before-quit',()=>{if(!closing){quality?.cancel();quality?.cancelDownload();modelInstall?.engine?.cancelDownload();engine?.cancelDownload?.();models?.cancel();planner?.cancelDownload();planner?.stop();queue?.stop();}try{storage?.close();}catch{}});
 

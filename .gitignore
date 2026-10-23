@@ -27,6 +27,9 @@ resources/backend/*
 !resources/backend/.gitkeep
 !resources/backend/build.json
 resources/ffmpeg/
+resources/quality/*
+!resources/quality/manifest.json
+!resources/quality/LICENSE*
 resources/planner/*
 !resources/planner/manifest.json
 !resources/planner/LICENSE*
@@ -41,6 +44,7 @@ scripts/*
 !scripts/stage-engine.ps1
 !scripts/stage-ace.ps1
 !scripts/stage-yue.ps1
+!scripts/stage-quality.mjs
 !scripts/bootstrap-runtime.py
 !scripts/engine-tokenize.patch
 !scripts/preserve-electron.cjs

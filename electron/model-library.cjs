@@ -4,12 +4,13 @@ const read=file=>JSON.parse(fs.readFileSync(file,'utf8').replace(/^\uFEFF/,''));
 class ModelLibrary{
  constructor(resources,folder,mini){this.resources=resources;this.folder=folder;this.mini=mini;}
  packages(routing={}){
-  const ace=read(path.join(this.resources,'ace/manifest.json')),yue=read(path.join(this.resources,'yue/manifest.json')),planner=read(path.join(this.resources,'planner/manifest.json'));
+  const ace=read(path.join(this.resources,'ace/manifest.json')),yue=read(path.join(this.resources,'yue/manifest.json')),planner=read(path.join(this.resources,'planner/manifest.json')),qualityFile=fs.existsSync(path.join(this.resources,'quality/manifest.json'))?path.join(this.resources,'quality/manifest.json'):path.join(this.resources,'planner/quality/manifest.json'),quality=fs.existsSync(qualityFile)?read(qualityFile):null;
   return [
    {id:'acestep-native',name:'ACE-Step XL SFT',precision:'BF16',kind:'music',recommended:true,description:'Plná přesnost, český jazyk a řízení struktury. Doporučený výchozí model pro tuto sestavu.',folder:'ACE-Step',license:'MIT / Apache-2.0',assets:[...ace.assets.map(a=>({...a,required:true})),...(ace.compatibilityAssets||[]).map(a=>({...a,required:false}))]},
    {id:'yue2-native',name:'YuE2',precision:'3B BF16',kind:'music',description:'Vlastní plán melodie a akordů. Další charakter zvuku; český zpěv může být méně přesný.',folder:'YuE2',license:'CC BY-NC 4.0 · nekomerční',assets:yue.assets.map(a=>({...a,required:true}))},
    {id:'minimax',name:'MiniMax-Music3',precision:'Automatická přesnost',kind:'music',description:'Alternativní kompozice a zvuk. Přesnost komponent se přizpůsobí paměti grafiky.',folder:'',license:'MiniMax Music3 Community License',assets:this.mini.entries().map(a=>({...a,required:Object.values(routing).includes(a.name)}))},
-   {id:'planner',name:'Qwen3 · hudební režie',precision:'8B Q5_K_M',kind:'planner',description:'Připravuje text, styl a délku pro všechny hudební modely.',folder:'PromptPlanner',license:'Apache-2.0',assets:[{...planner.model,required:true}]}
+   {id:'planner',name:'Qwen3 · hudební režie',precision:'8B Q5_K_M',kind:'planner',description:'Připravuje text, styl a délku pro všechny hudební modely.',folder:'PromptPlanner',license:'Apache-2.0',assets:[{...planner.model,required:true}]},
+   ...(quality?[{id:'quality',name:'Whisper · kontrola zpěvu',precision:'small · lokální CPU',kind:'quality',description:'Orientačně porovnává zazpívaná slova s textem. Přepis zpěvu může chybovat; emoce ani hudební vkus nehodnotí.',folder:'Whisper',license:'MIT',assets:[{...quality.model,required:true}]}]:[])
   ];
  }
  async status(routing){return Promise.all(this.packages(routing).map(async group=>{

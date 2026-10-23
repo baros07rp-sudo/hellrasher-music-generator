@@ -10,6 +10,8 @@
 - Knihovna nabízí hledání, filtrování podle modelu, řazení a hromadný výběr. Smazané skladby putují do **Koše**, odkud je lze obnovit. Trvalé smazání uvolní audio a replay; text projektu zůstává zachovaný.
 - **AI modely** spravují celé sady i jednotlivé soubory, přerušená stažení a odinstalaci. Vlastní neznámé soubory se nemažou.
 - **Aktualizace** kontrolují GitHub Releases, ověřují SHA-256 a nabídnou restart. Knihovna, váhy a spouštěč Electronu zůstávají zachované.
+- **Porovnání kompozic** vytváří samostatné varianty s různými seedy a propojí je s A/B poslechem. Všechny zůstávají uložené.
+- **Kontrola výsledku** měří technické problémy audia a pomocí místního Whisperu orientačně porovná zpívaná slova. Žánr, melodii a emoce posuzuje posluchač.
 
 ## Stažení a požadavky
 

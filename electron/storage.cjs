@@ -13,6 +13,7 @@ class Storage{
    CREATE TABLE IF NOT EXISTS lyrics_history(id INTEGER PRIMARY KEY,project_id TEXT NOT NULL REFERENCES projects(id),created TEXT NOT NULL,lyrics TEXT NOT NULL);`);
   if(!this.db.prepare('PRAGMA table_info(variants)').all().some(c=>c.name==='deleted_at'))this.db.exec('ALTER TABLE variants ADD COLUMN deleted_at TEXT');
   this.db.prepare("UPDATE jobs SET status='interrupted' WHERE status IN ('running','queued')").run();
+  for(const row of this.db.prepare('SELECT id,payload FROM variants').all()){const v=JSON.parse(row.payload);if(v.quality?.status==='pending'){v.quality={...v.quality,status:'unavailable',message:'Kontrolu přerušilo ukončení aplikace. Můžete ji spustit znovu.'};this.db.prepare('UPDATE variants SET payload=? WHERE id=?').run(JSON.stringify(v),row.id);}}
  }
  saveProject(p){
   const id=p.id||randomUUID(),now=new Date().toISOString(),previous=this.db.prepare('SELECT * FROM projects WHERE id=?').get(id);
@@ -30,6 +31,7 @@ class Storage{
  variants(projectId,trash=false){const where=['deleted_at IS '+(trash?'NOT NULL':'NULL')];if(projectId)where.push('project_id=?');const rows=this.db.prepare('SELECT * FROM variants WHERE '+where.join(' AND ')+' ORDER BY created DESC').all(...(projectId?[projectId]:[]));return rows.map(x=>({...JSON.parse(x.payload),favorite:!!x.favorite,...(x.deleted_at?{deletedAt:x.deleted_at}:{})}));}
  variant(id,includeTrash=false){const x=this.db.prepare('SELECT * FROM variants WHERE id=?').get(id);if(!x)throw Error('Skladba nebyla nalezena.');if(x.deleted_at&&!includeTrash)throw Error('Skladba je v koši. Nejprve ji obnovte.');return {...JSON.parse(x.payload),favorite:!!x.favorite,...(x.deleted_at?{deletedAt:x.deleted_at}:{})};}
  addVariant(v){this.db.prepare('INSERT INTO variants(id,project_id,created,name,favorite,payload) VALUES(?,?,?,?,?,?)').run(v.id,v.projectId,v.created,v.name,0,JSON.stringify(v));return v;}
+ setQuality(id,quality){const v={...this.variant(id),quality};this.db.prepare('UPDATE variants SET payload=? WHERE id=?').run(JSON.stringify(v),id);return v;}
  variantIds(ids){if(!Array.isArray(ids)||!ids.length||ids.length>200||ids.some(id=>typeof id!=='string'||!id))throw Error('Vyberte 1–200 skladeb.');return [...new Set(ids)];}
  trashVariants(ids,restore=false){ids=this.variantIds(ids);for(const id of ids)this.variant(id,true);const deleted=restore?null:new Date().toISOString();this.db.exec('BEGIN IMMEDIATE');try{for(const id of ids)this.db.prepare('UPDATE variants SET deleted_at=? WHERE id=?').run(deleted,id);this.db.exec('COMMIT');}catch(e){this.db.exec('ROLLBACK');throw e;}return {ids};}
  renameVariant(id,name){if(typeof name!=='string'||!name.trim()||name.trim().length>180)throw Error('Název skladby musí mít 1–180 znaků.');const v=this.variant(id);v.name=name.trim();v.metadata={...v.metadata,title:v.name};this.db.prepare('UPDATE variants SET name=?,payload=? WHERE id=?').run(v.name,JSON.stringify(v),id);return v;}

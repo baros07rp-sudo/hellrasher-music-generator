@@ -18,6 +18,8 @@ Model odvozuje části od Qwen3-8B (Apache-2.0), stable-audio-tools (MIT) a desc
 
 GGML: MIT, původní text se přikládá v právních zdrojích. Inference dále obsahuje vendored cpp-httplib, yyjson a MP3 kodek; původní licenční texty se přebírají ze zdrojového stromu. Jejich úplná dostupnost se kontroluje při stagingu balíčku.
 
+Whisper.cpp CPU runtime a Whisper small model: MIT. Připnuté zdroje, revize a hashe jsou v resources/quality/manifest.json, původní licence v resources/quality/LICENSE-whisper.txt. Modelové váhy nejsou součástí aplikačního ani aktualizačního ZIPu.
+
 ## NVIDIA CUDA
 
 Přibalené runtime DLL: cuBLAS, cuBLASLt a CUDA runtime 13; Windows NVIDIA ovladač se nepřibaluje ani nemění. Originální NVIDIA CUDA EULA v `resources/legal/NVIDIA-CUDA-EULA.txt`. SDK pro sestavení je staženo z oficiálního NVIDIA redistribučního manifestu a každá stažená komponenta má ověřený SHA-256. Vývojové překladače nejsou součástí instalátoru. Pro veřejnou distribuci je potřeba ověřit konkrétní seznam redistribuovatelných součástí a související oznámení EULA.
