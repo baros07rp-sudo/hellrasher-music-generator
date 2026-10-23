@@ -1,0 +1,9 @@
+{
+  "policy": "EVICT_STRICT",
+  "cuda": "13.0.2",
+  "extension": "POST /tokenize",
+  "engine": "minimaxmusic.cpp",
+  "architecture": "sm_120a",
+  "built": "2026-10-23T00:22:03.2520050Z",
+  "revision": "b260bc39232c7c4bda1a6cf86bd136f21dd33462"
+}

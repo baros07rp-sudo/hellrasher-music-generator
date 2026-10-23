@@ -1,0 +1,20 @@
+diff --git a/tools/mm-server.cpp b/tools/mm-server.cpp
+index 3da1f54..98e9cd7 100644
+--- a/tools/mm-server.cpp
++++ b/tools/mm-server.cpp
+@@ -782,6 +782,15 @@ int main(int argc, char ** argv) {
+     svr.set_payload_max_length(8 * 1024 * 1024);
+ 
+     svr.Post("/synth", handle_synth);
++    // HMG extension: count exactly the same cleaned prompt as /synth.
++    // Metadata-only tokenizer; this endpoint never runs GPU inference.
++    svr.Post("/tokenize", [](const httplib::Request & req, httplib::Response & res) {
++        if (!g_tok_ready) { json_error(res, 503, "Tokenizer unavailable"); return; }
++        MM3Request r; request_init(&r);
++        if (!request_parse_json(&r, req.body.c_str())) { json_error(res, 400, "Malformed JSON"); return; }
++        auto ids = mm3_build_prompt_ids([](const std::string & s) { return bpe_encode(&g_tok, s, false); }, r.caption, r.lyrics);
++        res.set_content("{\"available\":true,\"count\":" + std::to_string(ids.size()) + ",\"limit\":5000}", "application/json");
++    });
+     svr.Get("/health", [](const httplib::Request &, httplib::Response & res) {
+         res.set_content("{\"status\":\"ok\"}", "application/json");
+     });

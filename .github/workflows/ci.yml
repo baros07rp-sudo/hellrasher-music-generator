@@ -1,0 +1,22 @@
+name: Tests and frontend
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Enable pnpm
+        run: corepack enable
+      - name: Install dependencies
+        run: corepack pnpm@10.18.3 install --frozen-lockfile
+      - name: Test services and update helper
+        run: corepack pnpm@10.18.3 test
+      - name: Typecheck and frontend build
+        run: corepack pnpm@10.18.3 build

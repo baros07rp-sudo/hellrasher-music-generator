@@ -1,0 +1,21 @@
+{
+  "repository": "Serveurperso/YuE2-GGUF",
+  "revision": "e630f2b8f6aedf8254c3186438633c1b5eeaf80a",
+  "license": "CC-BY-NC-4.0",
+  "assets": [
+    {
+      "name": "YuE2-3B-BF16.gguf",
+      "role": "model",
+      "size": 7166072352,
+      "sha256": "668ca9ffa4622449916aae5068b5737363e7ec186a824cd3d7a1a8a95269f166",
+      "url": "https://huggingface.co/Serveurperso/YuE2-GGUF/resolve/e630f2b8f6aedf8254c3186438633c1b5eeaf80a/YuE2-3B-BF16.gguf"
+    },
+    {
+      "name": "YuE2-Vae-F32.gguf",
+      "role": "vae",
+      "size": 530497344,
+      "sha256": "93e49dfb1970e89ad64cacb17cf13b5d05f6bb30ef7ed3adae3050bcb728638a",
+      "url": "https://huggingface.co/Serveurperso/YuE2-GGUF/resolve/e630f2b8f6aedf8254c3186438633c1b5eeaf80a/YuE2-Vae-F32.gguf"
+    }
+  ]
+}

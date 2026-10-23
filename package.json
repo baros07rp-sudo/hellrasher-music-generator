@@ -1,0 +1,138 @@
+{
+  "name": "hellrasher-music-generator",
+  "productName": "Hellrasher Music Generator",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Lokální hudební studio s ACE-Step, YuE2 a MiniMax-Music3",
+  "author": "Hellrasher",
+  "type": "module",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "start": "electron .",
+    "build": "tsc --noEmit && vite build",
+    "test": "node --test tests/*.test.mjs",
+    "dist": "pnpm build && electron-builder --win nsis zip --x64 --publish never",
+    "test:music": "node scripts/test-music.mjs",
+    "package:update": "node scripts/package-update.mjs"
+  },
+  "dependencies": {
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "lucide-react": "^0.468.0",
+    "fflate": "^0.8.2"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.7",
+    "@vitejs/plugin-react": "6.1.1",
+    "electron": "44.3.0",
+    "electron-builder": "26.15.3",
+    "typescript": "7.0.2",
+    "vite": "8.2.2"
+  },
+  "build": {
+    "appId": "studio.hellrasher.generator",
+    "productName": "Hellrasher Music Generator",
+    "asar": true,
+    "afterPack": "scripts/preserve-electron.cjs",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**",
+      "electron/**",
+      "package.json",
+      "README.md",
+      "LICENSES.md",
+      "docs/MODELS.md",
+      "docs/DEVELOPMENT.md",
+      "docs/UPDATES.md"
+    ],
+    "extraResources": [
+      {
+        "from": "resources/brand.ico",
+        "to": "brand.ico"
+      },
+      {
+        "from": "resources/electron-runtime.json",
+        "to": "electron-runtime.json"
+      },
+      {
+        "from": "resources/backend",
+        "to": "backend"
+      },
+      {
+        "from": "resources/ffmpeg",
+        "to": "ffmpeg"
+      },
+      {
+        "from": "resources/legal",
+        "to": "legal"
+      },
+      {
+        "from": "resources/models",
+        "to": "model-manifest"
+      },
+      {
+        "from": "resources/planner",
+        "to": "planner",
+        "filter": [
+          "llama-server.exe",
+          "llama-server-impl.dll",
+          "llama.dll",
+          "llama-common.dll",
+          "ggml*.dll",
+          "libomp.dll",
+          "mtmd.dll",
+          "LICENSE*",
+          "manifest.json"
+        ]
+      },
+      {
+        "from": "resources/ace",
+        "to": "ace"
+      },
+      {
+        "from": "resources/yue",
+        "to": "yue"
+      }
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "icon": "public/brand.png",
+      "executableName": "Hellrasher Music Generator",
+      "signAndEditExecutable": false,
+      "signExecutable": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": "always",
+      "createStartMenuShortcut": true,
+      "shortcutName": "Hellrasher Music Generator",
+      "deleteAppDataOnUninstall": false,
+      "installerLanguages": [
+        "cs_CZ",
+        "en_US"
+      ],
+      "language": "1029",
+      "artifactName": "Hellrasher Music Generator Setup.${ext}",
+      "script": "scripts/installer-with-existing-uninstaller.nsi",
+      "include": "scripts/installer.nsh"
+    },
+    "portable": {
+      "artifactName": "Hellrasher Music Generator Portable.${ext}"
+    }
+  },
+  "appVersion": "1.1.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/baros07rp-sudo/hellrasher-music-generator.git"
+  }
+}

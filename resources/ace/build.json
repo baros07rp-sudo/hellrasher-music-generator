@@ -1,0 +1,8 @@
+﻿{
+    "architecture":  "sm_120a",
+    "policy":  "release models between jobs",
+    "cuda":  "13.0.2",
+    "built":  "2026-10-23T15:06:55.7562674Z",
+    "revision":  "de858d8e1a94f0e1939cf9bdd8ff7d9631953077",
+    "engine":  "acestep.cpp"
+}

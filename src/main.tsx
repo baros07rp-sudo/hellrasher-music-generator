@@ -1,0 +1,3 @@
+import React from 'react';import{createRoot}from'react-dom/client';import{App}from'./App';import './styles.css';import './usability.css';
+class ErrorBoundary extends React.Component<React.PropsWithChildren,{error:string}>{state={error:''};static getDerivedStateFromError(e:Error){return{error:e.message};}render(){return this.state.error?<div className="recovery"><h1>Hellrasher Music Generator</h1><p>Rozhraní narazilo na chybu. Uložené projekty zůstávají na disku.</p><pre>{this.state.error}</pre><button onClick={()=>location.reload()}>Obnovit rozhraní</button></div>:this.props.children;}}
+createRoot(document.getElementById('root')!).render(<ErrorBoundary><App/></ErrorBoundary>);

@@ -1,0 +1,56 @@
+{
+  "repository": "Serveurperso/ACE-Step-1.5-GGUF",
+  "revision": "666ac70204440867d8c01ba4b119cc79c95b370a",
+  "license": "MIT",
+  "assets": [
+    {
+      "name": "acestep-5Hz-lm-4B-BF16.gguf",
+      "size": 8384454592,
+      "sha256": "9fca9915919a1108da33d8d98fbe6c1a07bfee101d27098416650dcbde037b72",
+      "url": "https://huggingface.co/Serveurperso/ACE-Step-1.5-GGUF/resolve/666ac70204440867d8c01ba4b119cc79c95b370a/acestep-5Hz-lm-4B-BF16.gguf?download=true"
+    },
+    {
+      "name": "Qwen3-Embedding-0.6B-BF16.gguf",
+      "size": 1196890592,
+      "sha256": "6f57900773fbd447b2943bc8126e2dc68ed009151ba89a47c14d1be05d4c73df",
+      "url": "https://huggingface.co/Serveurperso/ACE-Step-1.5-GGUF/resolve/666ac70204440867d8c01ba4b119cc79c95b370a/Qwen3-Embedding-0.6B-BF16.gguf?download=true"
+    },
+    {
+      "name": "acestep-v15-xl-sft-BF16.gguf",
+      "size": 9978530784,
+      "sha256": "c998effb0c3b447202c49242fd9ebf55ea7afccf766d4b4dd4ecedaed92bcbbb",
+      "url": "https://huggingface.co/Serveurperso/ACE-Step-1.5-GGUF/resolve/666ac70204440867d8c01ba4b119cc79c95b370a/acestep-v15-xl-sft-BF16.gguf"
+    },
+    {
+      "name": "vae-BF16.gguf",
+      "size": 337420928,
+      "sha256": "0599862ac5d15cd308e1d2e368373aea6c02e25ebd1737ad4a4562a0901b0ef8",
+      "url": "https://huggingface.co/Serveurperso/ACE-Step-1.5-GGUF/resolve/666ac70204440867d8c01ba4b119cc79c95b370a/vae-BF16.gguf"
+    }
+  ],
+  "compatibilityAssets": [
+    {
+      "name": "acestep-5Hz-lm-4B-Q8_0.gguf",
+      "size": 4457323648,
+      "sha256": "972f91147a167f0c041f1b158d67985a82c0f6a852e68cdf70e46030cf08b1bc",
+      "url": "https://huggingface.co/Serveurperso/ACE-Step-1.5-GGUF/resolve/666ac70204440867d8c01ba4b119cc79c95b370a/acestep-5Hz-lm-4B-Q8_0.gguf"
+    },
+    {
+      "name": "Qwen3-Embedding-0.6B-Q8_0.gguf",
+      "size": 784144960,
+      "sha256": "972f23255e46adfe744a0eb9a0039f3c63988f65753b0968d776e8b27168c321",
+      "url": "https://huggingface.co/Serveurperso/ACE-Step-1.5-GGUF/resolve/666ac70204440867d8c01ba4b119cc79c95b370a/Qwen3-Embedding-0.6B-Q8_0.gguf"
+    },
+    {
+      "name": "acestep-v15-xl-sft-Q8_0.gguf",
+      "size": 5305828704,
+      "sha256": "d7b06fadab214375ef5ebcfa44bf4a10489ea364b119f5b9ecbcd870408bdab9",
+      "url": "https://huggingface.co/Serveurperso/ACE-Step-1.5-GGUF/resolve/666ac70204440867d8c01ba4b119cc79c95b370a/acestep-v15-xl-sft-Q8_0.gguf"
+    }
+  ],
+  "defaults": {
+    "lm": "acestep-5Hz-lm-4B-BF16.gguf",
+    "dit": "acestep-v15-xl-sft-BF16.gguf",
+    "embedding": "Qwen3-Embedding-0.6B-BF16.gguf"
+  }
+}

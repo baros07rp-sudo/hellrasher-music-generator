@@ -1,0 +1,16 @@
+{
+  "model": {
+    "name": "Qwen3-8B-Q5_K_M.gguf",
+    "size": 5851112224,
+    "sha256": "068bae163faa96ad48032daf4e071a6a28fe67d8dcc95367609c2ff165e52738",
+    "url": "https://huggingface.co/Qwen/Qwen3-8B-GGUF/resolve/7c41481f57cb95916b40956ab2f0b139b296d974/Qwen3-8B-Q5_K_M.gguf?download=true",
+    "repository": "Qwen/Qwen3-8B-GGUF",
+    "revision": "7c41481f57cb95916b40956ab2f0b139b296d974"
+  },
+  "runtime": {
+    "release": "b11798",
+    "source": "https://github.com/ggml-org/llama.cpp",
+    "cpuArchiveSha256": "ee0a6715749b63bc61c193152d9442b98e13403870eb54083d64bcf407d4d375",
+    "vulkanArchiveSha256": "a120759e8910823364f5d0044b054a0ba7567e6e27f70a1b49fcc40882943dd2"
+  }
+}
