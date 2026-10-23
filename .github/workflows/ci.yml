@@ -16,6 +16,8 @@ jobs:
         run: corepack enable
       - name: Install dependencies
         run: corepack pnpm@10.18.3 install --frozen-lockfile
+      - name: Prepare Electron runtime for the Windows helper test
+        run: node node_modules/electron/install.js
       - name: Test services and update helper
         run: corepack pnpm@10.18.3 test
       - name: Typecheck and frontend build
